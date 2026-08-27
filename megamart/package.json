@@ -1,0 +1,13 @@
+{
+  "name": "megamart-phase1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MegaMart application-layer microservices portfolio project",
+  "scripts": {
+    "copy-envs": "node scripts/copy-envs.js",
+    "install-all": "node scripts/install-all.js",
+    "start-all": "node scripts/start-all.js",
+    "check": "node scripts/check-project.js",
+    "health-check": "node scripts/health-check.js"
+  }
+}

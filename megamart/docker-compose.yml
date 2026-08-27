@@ -1,0 +1,581 @@
+name: megamart
+
+x-common-environment: &common-environment
+  NODE_ENV: production
+  JWT_SECRET: ${JWT_SECRET:-megamart-local-jwt-secret-change-me}
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-megamart-local-service-token-change-me}
+  HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-5000}
+
+x-app-defaults: &app-defaults
+  restart: unless-stopped
+  networks:
+    - megamart-network
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - megamart-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - megamart-network
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-megamart}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-megamart}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - megamart-network
+
+  auth-service:
+    <<: *app-defaults
+    build:
+      context: ./services/auth-service
+    image: megamart/auth-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/auth_db
+      USER_SERVICE_URL: http://user-service:3002
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  user-service:
+    <<: *app-defaults
+    build:
+      context: ./services/user-service
+    image: megamart/user-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3002
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/user_db
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  product-service:
+    <<: *app-defaults
+    build:
+      context: ./services/product-service
+    image: megamart/product-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3003
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/product_db
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  catalog-service:
+    <<: *app-defaults
+    build:
+      context: ./services/catalog-service
+    image: megamart/catalog-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3004
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/catalog_db
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  inventory-service:
+    <<: *app-defaults
+    build:
+      context: ./services/inventory-service
+    image: megamart/inventory-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3005
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/inventory_db
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  cart-service:
+    <<: *app-defaults
+    build:
+      context: ./services/cart-service
+    image: megamart/cart-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3006
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cart_db
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  order-service:
+    <<: *app-defaults
+    build:
+      context: ./services/order-service
+    image: megamart/order-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3007
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/order_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  payment-service:
+    <<: *app-defaults
+    build:
+      context: ./services/payment-service
+    image: megamart/payment-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3008
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/payment_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  shipping-service:
+    <<: *app-defaults
+    build:
+      context: ./services/shipping-service
+    image: megamart/shipping-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3009
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/shipping_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    <<: *app-defaults
+    build:
+      context: ./services/notification-service
+    image: megamart/notification-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3010
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3010:3010"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  review-service:
+    <<: *app-defaults
+    build:
+      context: ./services/review-service
+    image: megamart/review-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3011
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/review_db
+    ports:
+      - "3011:3011"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  rating-service:
+    <<: *app-defaults
+    build:
+      context: ./services/rating-service
+    image: megamart/rating-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3012
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rating_db
+    ports:
+      - "3012:3012"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  search-service:
+    <<: *app-defaults
+    build:
+      context: ./services/search-service
+    image: megamart/search-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3013
+      PRODUCT_SERVICE_URL: http://product-service:3003
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3013:3013"
+    depends_on:
+      redis:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+
+  recommendation-service:
+    <<: *app-defaults
+    build:
+      context: ./services/recommendation-service
+    image: megamart/recommendation-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3014
+      PRODUCT_SERVICE_URL: http://product-service:3003
+      RATING_SERVICE_URL: http://rating-service:3012
+    ports:
+      - "3014:3014"
+    depends_on:
+      product-service:
+        condition: service_healthy
+      rating-service:
+        condition: service_healthy
+
+  pricing-service:
+    <<: *app-defaults
+    build:
+      context: ./services/pricing-service
+    image: megamart/pricing-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3015
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/pricing_db
+    ports:
+      - "3015:3015"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  promotion-service:
+    <<: *app-defaults
+    build:
+      context: ./services/promotion-service
+    image: megamart/promotion-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3016
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/promotion_db
+    ports:
+      - "3016:3016"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  wishlist-service:
+    <<: *app-defaults
+    build:
+      context: ./services/wishlist-service
+    image: megamart/wishlist-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3017
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/wishlist_db
+    ports:
+      - "3017:3017"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  address-service:
+    <<: *app-defaults
+    build:
+      context: ./services/address-service
+    image: megamart/address-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3018
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/address_db
+    ports:
+      - "3018:3018"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  checkout-service:
+    <<: *app-defaults
+    build:
+      context: ./services/checkout-service
+    image: megamart/checkout-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3019
+      CART_SERVICE_URL: http://cart-service:3006
+      PRODUCT_SERVICE_URL: http://product-service:3003
+      PRICING_SERVICE_URL: http://pricing-service:3015
+      PROMOTION_SERVICE_URL: http://promotion-service:3016
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+      FRAUD_SERVICE_URL: http://fraud-service:3024
+      PAYMENT_SERVICE_URL: http://payment-service:3008
+      ORDER_SERVICE_URL: http://order-service:3007
+      SHIPPING_SERVICE_URL: http://shipping-service:3009
+      NOTIFICATION_SERVICE_URL: http://notification-service:3010
+      ANALYTICS_SERVICE_URL: http://analytics-service:3023
+      ADDRESS_SERVICE_URL: http://address-service:3018
+    ports:
+      - "3019:3019"
+    depends_on:
+      cart-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      pricing-service:
+        condition: service_healthy
+      promotion-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      fraud-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      shipping-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+      address-service:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *app-defaults
+    build:
+      context: ./services/api-gateway
+    image: megamart/api-gateway:local
+    environment:
+      <<: *common-environment
+      PORT: 3020
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      PRODUCT_SERVICE_URL: http://product-service:3003
+      CATALOG_SERVICE_URL: http://catalog-service:3004
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+      CART_SERVICE_URL: http://cart-service:3006
+      ORDER_SERVICE_URL: http://order-service:3007
+      PAYMENT_SERVICE_URL: http://payment-service:3008
+      SHIPPING_SERVICE_URL: http://shipping-service:3009
+      NOTIFICATION_SERVICE_URL: http://notification-service:3010
+      REVIEW_SERVICE_URL: http://review-service:3011
+      RATING_SERVICE_URL: http://rating-service:3012
+      SEARCH_SERVICE_URL: http://search-service:3013
+      RECOMMENDATION_SERVICE_URL: http://recommendation-service:3014
+      PRICING_SERVICE_URL: http://pricing-service:3015
+      PROMOTION_SERVICE_URL: http://promotion-service:3016
+      WISHLIST_SERVICE_URL: http://wishlist-service:3017
+      ADDRESS_SERVICE_URL: http://address-service:3018
+      CHECKOUT_SERVICE_URL: http://checkout-service:3019
+      ADMIN_SERVICE_URL: http://admin-service:3021
+      MEDIA_SERVICE_URL: http://media-service:3022
+      ANALYTICS_SERVICE_URL: http://analytics-service:3023
+    ports:
+      - "3020:3020"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      shipping-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      review-service:
+        condition: service_healthy
+      rating-service:
+        condition: service_healthy
+      search-service:
+        condition: service_healthy
+      recommendation-service:
+        condition: service_healthy
+      pricing-service:
+        condition: service_healthy
+      promotion-service:
+        condition: service_healthy
+      wishlist-service:
+        condition: service_healthy
+      address-service:
+        condition: service_healthy
+      checkout-service:
+        condition: service_healthy
+      admin-service:
+        condition: service_healthy
+      media-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+
+  admin-service:
+    <<: *app-defaults
+    build:
+      context: ./services/admin-service
+    image: megamart/admin-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3021
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/admin_db
+      PRODUCT_SERVICE_URL: http://product-service:3003
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+    ports:
+      - "3021:3021"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+
+  media-service:
+    <<: *app-defaults
+    build:
+      context: ./services/media-service
+    image: megamart/media-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3022
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/media_db
+    ports:
+      - "3022:3022"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  analytics-service:
+    <<: *app-defaults
+    build:
+      context: ./services/analytics-service
+    image: megamart/analytics-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3023
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/analytics_db
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-megamart}:${RABBITMQ_DEFAULT_PASS:-megamart}@rabbitmq:5672
+      EVENT_EXCHANGE: megamart.events
+    ports:
+      - "3023:3023"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  fraud-service:
+    <<: *app-defaults
+    build:
+      context: ./services/fraud-service
+    image: megamart/fraud-service:local
+    environment:
+      <<: *common-environment
+      PORT: 3024
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/fraud_db
+    ports:
+      - "3024:3024"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    restart: unless-stopped
+    build:
+      context: ./frontend
+    image: megamart/frontend:local
+    container_name: megamart-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - megamart-network
+
+networks:
+  megamart-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

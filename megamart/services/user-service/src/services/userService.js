@@ -1,0 +1,1 @@
+const m=require('../models/userModel'); module.exports={create:m.create,get:m.byAuthId,update:m.update,remove:m.remove};

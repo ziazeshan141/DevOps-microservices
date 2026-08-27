@@ -1,0 +1,2 @@
+const router=require('express').Router(); const c=require('./controllers/authController'); const {requireAuth}=require('./middleware/authMiddleware');
+router.post('/api/v1/auth/register',c.register); router.post('/api/v1/auth/login',c.login); router.get('/api/v1/auth/me',requireAuth,c.me); router.post('/api/v1/auth/refresh',c.refresh); router.post('/api/v1/auth/logout',c.logout); module.exports=router;

@@ -1,0 +1,1 @@
+const r=require('express').Router(),{proxy}=require('./services/proxyService');r.use(proxy);module.exports=r;

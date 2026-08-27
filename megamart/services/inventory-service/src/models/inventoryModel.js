@@ -1,0 +1,6 @@
+const {pool,query}=require('../config/database');
+async function get(productId){return (await query('SELECT * FROM inventory WHERE product_id=$1',[productId])).rows[0]}
+async function upsert({productId,availableQty,reorderLevel=0}){return (await query(`INSERT INTO inventory(product_id,available_qty,reorder_level) VALUES($1,$2,$3) ON CONFLICT(product_id) DO UPDATE SET available_qty=excluded.available_qty,reorder_level=excluded.reorder_level,updated_at=now() RETURNING *`,[productId,availableQty,reorderLevel])).rows[0]}
+async function reserve(productId,qty){const c=await pool.connect();try{await c.query('BEGIN');const x=(await c.query('SELECT * FROM inventory WHERE product_id=$1 FOR UPDATE',[productId])).rows[0];if(!x||x.available_qty<qty){const e=new Error('Insufficient inventory');e.status=409;throw e}const out=(await c.query('UPDATE inventory SET available_qty=available_qty-$2,reserved_qty=reserved_qty+$2,updated_at=now() WHERE product_id=$1 RETURNING *',[productId,qty])).rows[0];await c.query('COMMIT');return out}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}}
+async function release(productId,qty){return (await query('UPDATE inventory SET available_qty=available_qty+$2,reserved_qty=GREATEST(0,reserved_qty-$2),updated_at=now() WHERE product_id=$1 RETURNING *',[productId,qty])).rows[0]}
+module.exports={get,upsert,reserve,release};

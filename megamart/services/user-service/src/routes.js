@@ -1,0 +1,2 @@
+const r=require('express').Router(),c=require('./controllers/userController'),a=require('./middleware/authMiddleware');
+r.post('/internal/users',a.requireInternal,c.internalCreate); r.get('/api/v1/users/:id',a.requireAuth,c.get); r.get('/api/v1/users/:id/profile',a.requireAuth,c.get); r.put('/api/v1/users/:id',a.requireAuth,c.update); r.delete('/api/v1/users/:id',a.requireAuth,c.remove); module.exports=r;

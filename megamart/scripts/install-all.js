@@ -1,0 +1,1 @@
+const fs=require('fs'),path=require('path'),{spawnSync}=require('child_process');const root=path.join(__dirname,'..','services');for(const name of fs.readdirSync(root)){console.log(`\n=== npm install: ${name} ===`);const r=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['install'],{cwd:path.join(root,name),stdio:'inherit'});if(r.status!==0)process.exit(r.status||1)}

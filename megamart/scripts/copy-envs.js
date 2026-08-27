@@ -1,0 +1,1 @@
+const fs=require('fs'),path=require('path');const services=path.join(__dirname,'..','services');for(const name of fs.readdirSync(services)){const dir=path.join(services,name),src=path.join(dir,'.env.example'),dst=path.join(dir,'.env');if(fs.existsSync(src)&&!fs.existsSync(dst)){fs.copyFileSync(src,dst);console.log('Created',path.relative(process.cwd(),dst))}}

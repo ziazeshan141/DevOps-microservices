@@ -1,0 +1,1 @@
+const s=require('../services/searchService');async function search(req,res,next){try{res.json(await s.search(req.query.q||''))}catch(e){next(e)}}module.exports={search};

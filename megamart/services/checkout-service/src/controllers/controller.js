@@ -1,0 +1,1 @@
+const s=require('../services/checkoutService');async function checkout(req,res,next){try{res.status(201).json(await s.checkout(req))}catch(e){next(e)}}module.exports={checkout};

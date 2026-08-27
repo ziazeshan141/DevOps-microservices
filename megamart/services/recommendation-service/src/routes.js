@@ -1,0 +1,1 @@
+const r=require('express').Router(),s=require('./services/recommendationService');r.get('/api/v1/recommendations',async(req,res,next)=>{try{res.json(await s.recommend(req.query.limit))}catch(e){next(e)}});module.exports=r;

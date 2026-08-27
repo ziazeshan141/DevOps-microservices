@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('./middleware/authMiddleware'),c=require('./controllers/controller');r.post('/api/v1/checkout',a.requireAuth,c.checkout);module.exports=r;

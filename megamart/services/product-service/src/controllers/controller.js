@@ -1,0 +1,6 @@
+const s=require('../services/service'); const {query}=require('../config/database');
+async function create(req,res,next){try{res.status(201).json(await s.create(req.body))}catch(e){if(e.code==='23505'){e.status=409;e.code='DUPLICATE_SKU'}next(e)}}
+async function list(req,res,next){try{if(req.query.q){const rows=(await query(`SELECT * FROM products WHERE status='active' AND (name ILIKE $1 OR sku ILIKE $1 OR brand ILIKE $1) ORDER BY created_at DESC LIMIT 100`,[`%${req.query.q}%`])).rows;return res.json(rows)}res.json(await s.list(req.query.limit,req.query.offset))}catch(e){next(e)}}
+async function get(req,res,next){try{const x=await s.get(req.params.id);if(!x)return res.status(404).json({error:'NOT_FOUND'});res.json(x)}catch(e){next(e)}}
+async function update(req,res,next){try{const x=await s.update(req.params.id,req.body);if(!x)return res.status(404).json({error:'NOT_FOUND'});res.json(x)}catch(e){next(e)}}
+async function remove(req,res,next){try{await s.remove(req.params.id);res.status(204).end()}catch(e){next(e)}} module.exports={create,list,get,update,remove};

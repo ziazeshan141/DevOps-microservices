@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "MegaMart Phase 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gateway",
+      "value": "http://localhost:3020"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Register customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/auth/register",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "register"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"customer@megamart.local\",\n  \"password\": \"ChangeMe123!\",\n  \"fullName\": \"MegaMart Customer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/auth/login",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"customer@megamart.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "List products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/v1/products",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "products"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Search products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/v1/search?q=phone",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "search?q=phone"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add cart item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/cart/items",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cart",
+            "items"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get cart",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/cart",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cart"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create address",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/addresses",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "addresses"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"label\": \"Home\",\n  \"recipientName\": \"MegaMart Customer\",\n  \"line1\": \"123 Demo Street\",\n  \"city\": \"Riyadh\",\n  \"state\": \"Riyadh\",\n  \"postalCode\": \"12345\",\n  \"country\": \"SA\",\n  \"phone\": \"0500000000\",\n  \"isDefault\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Checkout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/checkout",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "checkout"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"currency\": \"USD\",\n  \"paymentMethod\": {\n    \"type\": \"card\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "List orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{gateway}}/api/v1/orders",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/v1/recommendations",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recommendations"
+          ]
+        }
+      }
+    }
+  ]
+}

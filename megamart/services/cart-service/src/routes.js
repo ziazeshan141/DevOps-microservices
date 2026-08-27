@@ -1,0 +1,1 @@
+const r=require('express').Router(),c=require('./controllers/cartController'),a=require('./middleware/authMiddleware');r.use('/api/v1/cart',a.requireAuth);r.get('/api/v1/cart',c.list);r.post('/api/v1/cart/items',c.add);r.put('/api/v1/cart/items/:productId',c.set);r.delete('/api/v1/cart/items/:productId',c.remove);r.delete('/api/v1/cart',c.clear);module.exports=r;

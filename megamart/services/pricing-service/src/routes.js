@@ -1,0 +1,1 @@
+const r=require('express').Router(),c=require('./controllers/controller'),a=require('./middleware/authMiddleware');r.get('/api/v1/pricing/:productId',c.get);r.post('/api/v1/pricing',a.requireAuth,a.requireRole('admin'),c.create);r.put('/api/v1/pricing/:id',a.requireAuth,a.requireRole('admin'),c.update);module.exports=r;

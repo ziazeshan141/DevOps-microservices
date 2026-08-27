@@ -1,0 +1,20 @@
+-- Run with: psql -U postgres -f docs/sql/create-databases.sql
+SELECT 'CREATE DATABASE auth_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auth_db')\gexec
+SELECT 'CREATE DATABASE user_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'user_db')\gexec
+SELECT 'CREATE DATABASE product_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'product_db')\gexec
+SELECT 'CREATE DATABASE catalog_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'catalog_db')\gexec
+SELECT 'CREATE DATABASE inventory_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'inventory_db')\gexec
+SELECT 'CREATE DATABASE cart_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'cart_db')\gexec
+SELECT 'CREATE DATABASE order_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'order_db')\gexec
+SELECT 'CREATE DATABASE payment_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'payment_db')\gexec
+SELECT 'CREATE DATABASE shipping_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'shipping_db')\gexec
+SELECT 'CREATE DATABASE review_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'review_db')\gexec
+SELECT 'CREATE DATABASE rating_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'rating_db')\gexec
+SELECT 'CREATE DATABASE pricing_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'pricing_db')\gexec
+SELECT 'CREATE DATABASE promotion_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'promotion_db')\gexec
+SELECT 'CREATE DATABASE wishlist_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wishlist_db')\gexec
+SELECT 'CREATE DATABASE address_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'address_db')\gexec
+SELECT 'CREATE DATABASE admin_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'admin_db')\gexec
+SELECT 'CREATE DATABASE media_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'media_db')\gexec
+SELECT 'CREATE DATABASE analytics_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'analytics_db')\gexec
+SELECT 'CREATE DATABASE fraud_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'fraud_db')\gexec

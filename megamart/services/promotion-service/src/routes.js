@@ -1,0 +1,1 @@
+const r=require('express').Router(),c=require('./controllers/controller'),a=require('./middleware/authMiddleware');r.get('/api/v1/promotions',a.requireAuth,a.requireRole('admin'),c.list);r.post('/api/v1/promotions',a.requireAuth,a.requireRole('admin'),c.create);r.post('/api/v1/promotions/validate',a.requireAuth,c.validate);module.exports=r;

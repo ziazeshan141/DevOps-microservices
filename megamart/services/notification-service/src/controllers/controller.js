@@ -1,0 +1,1 @@
+const s=require('../services/notificationService');async function send(req,res,next){try{res.status(202).json(await s.send(req.body))}catch(e){next(e)}}module.exports={send};
