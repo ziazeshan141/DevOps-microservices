@@ -1,4 +1,4 @@
-name: Microservices CI
+name: MegaMart Microservices CI
 
 on:
   push:
@@ -13,15 +13,15 @@ permissions:
   contents: read
 
 env:
+  NODE_VERSION: "22"
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
 
   # ============================================================
-  # 1. BUILD + TEST + SECURITY + DOCKER + ECR
+  # BUILD + TEST + SECURITY + DOCKER + ECR
   # ============================================================
 
   build:
@@ -32,237 +32,473 @@ jobs:
       fail-fast: false
 
       matrix:
-        service:
-          - auth-service
-          - user-service
-          - product-service
-          - cart-service
-          - order-service
-          - payment-service
-          - notification-service
-          - api-gateway
-          - frontend
-          - catalog-service
-          - inventory-service
-          - shipping-service
-          - recommendation-service
-          - review-service
-          - search-service
-          - pricing-service
-          - promotion-service
-          - wishlist-service
-          - analytics-service
-          - fraud-service
-          - invoice-service
-          - customer-service
-          - delivery-service
-          - support-service
-          - reporting-service
+        include:
+
+          # ====================================================
+          # BACKEND MICROSERVICES
+          # ====================================================
+
+          - service: auth-service
+            path: megamart/services/auth-service
+            type: backend
+
+          - service: user-service
+            path: megamart/services/user-service
+            type: backend
+
+          - service: product-service
+            path: megamart/services/product-service
+            type: backend
+
+          - service: catalog-service
+            path: megamart/services/catalog-service
+            type: backend
+
+          - service: inventory-service
+            path: services/inventory-service
+            type: backend
+
+          - service: cart-service
+            path: megamart/services/cart-service
+            type: backend
+
+          - service: order-service
+            path: megamart/services/order-service
+            type: backend
+
+          - service: payment-service
+            path: megamart/services/payment-service
+            type: backend
+
+          - service: shipping-service
+            path: megamart/services/shipping-service
+            type: backend
+
+          - service: notification-service
+            path: megamart/services/notification-service
+            type: backend
+
+          - service: review-service
+            path: megamart/services/review-service
+            type: backend
+
+          - service: rating-service
+            path: megamart/services/rating-service
+            type: backend
+
+          - service: search-service
+            path: megamart/services/search-service
+            type: backend
+
+          - service: recommendation-service
+            path: megamart/services/recommendation-service
+            type: backend
+
+          - service: pricing-service
+            path: megamart/services/pricing-service
+            type: backend
+
+          - service: promotion-service
+            path: megamart/services/promotion-service
+            type: backend
+
+          - service: wishlist-service
+            path: megamart/services/wishlist-service
+            type: backend
+
+          - service: address-service
+            path: megamart/services/address-service
+            type: backend
+
+          - service: checkout-service
+            path: megamart/services/checkout-service
+            type: backend
+
+          - service: api-gateway
+            path: megamart/services/api-gateway
+            type: backend
+
+          - service: admin-service
+            path: megamart/services/admin-service
+            type: backend
+
+          - service: media-service
+            path: megamart/services/media-service
+            type: backend
+
+          - service: analytics-service
+            path: megamart/services/analytics-service
+            type: backend
+
+          - service: fraud-service
+            path: megamart/services/fraud-service
+            type: backend
+
+          # ====================================================
+          # FRONTEND
+          # ====================================================
+
+          - service: frontend
+            path: megamart/frontend
+            type: frontend
 
     steps:
 
-      # --------------------------------------------------------
-      # 1. Checkout
-      # --------------------------------------------------------
+      # ========================================================
+      # 1. CHECKOUT
+      # ========================================================
 
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
 
-      # --------------------------------------------------------
-      # 2. Display service
-      # --------------------------------------------------------
+      # ========================================================
+      # 2. DISPLAY SERVICE INFO
+      # ========================================================
 
       - name: Display service information
         run: |
           echo "=========================================="
+          echo "MegaMart CI"
+          echo "=========================================="
           echo "Service: ${{ matrix.service }}"
+          echo "Type:    ${{ matrix.type }}"
+          echo "Path:    ${{ matrix.path }}"
           echo "Commit:  ${{ github.sha }}"
           echo "Branch:  ${{ github.ref_name }}"
+          echo "Event:   ${{ github.event_name }}"
           echo "=========================================="
 
 
-      # --------------------------------------------------------
-      # 3. Set up Node.js
-      # --------------------------------------------------------
-      - name: Debug repository structure
+      # ========================================================
+      # 3. VERIFY SERVICE DIRECTORY
+      # ========================================================
+
+      - name: Verify project files
         run: |
-          echo "Current directory:"
-            pwd
+          echo "Checking directory:"
+          echo "${{ matrix.path }}"
+          echo ""
 
-          echo "Repository structure:"
-          ls -R
+          if [ ! -d "${{ matrix.path }}" ]; then
+            echo "ERROR: Directory does not exist:"
+            echo "${{ matrix.path }}"
+            exit 1
+          fi
 
-          echo "Package lock files:"
-          find . -name "package-lock.json" -print
-        
+          echo "Directory exists."
+          echo ""
+
+          ls -la "${{ matrix.path }}"
+
+          echo ""
+          echo "Checking package.json..."
+
+          if [ ! -f "${{ matrix.path }}/package.json" ]; then
+            echo "ERROR: package.json not found"
+            exit 1
+          fi
+
+          echo "package.json found."
+
+          echo ""
+          echo "Checking package-lock.json..."
+
+          if [ ! -f "${{ matrix.path }}/package-lock.json" ]; then
+            echo "ERROR: package-lock.json not found"
+            echo ""
+            echo "Generate it locally using:"
+            echo "cd ${{ matrix.path }}"
+            echo "npm install"
+            exit 1
+          fi
+
+          echo "package-lock.json found."
+
+          echo ""
+          echo "Checking Dockerfile..."
+
+          if [ ! -f "${{ matrix.path }}/Dockerfile" ]; then
+            echo "ERROR: Dockerfile not found"
+            exit 1
+          fi
+
+          echo "Dockerfile found."
+
+
+      # ========================================================
+      # 4. SETUP NODE.JS
+      # ========================================================
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: ${{ matrix.path }}/package-lock.json
 
 
-      # --------------------------------------------------------
-      # 4. Install dependencies
-      # --------------------------------------------------------
+      # ========================================================
+      # 5. DISPLAY NODE/NPM VERSIONS
+      # ========================================================
+
+      - name: Display Node.js versions
+        run: |
+          echo "Node version:"
+          node --version
+
+          echo "NPM version:"
+          npm --version
+
+
+      # ========================================================
+      # 6. INSTALL DEPENDENCIES
+      # ========================================================
 
       - name: Install dependencies
-        working-directory: services/${{ matrix.service }}
-        run: |
-          npm ci
+        working-directory: ${{ matrix.path }}
+        run: npm ci
 
 
-      # --------------------------------------------------------
-      # 5. Run unit tests
-      # --------------------------------------------------------
+      # ========================================================
+      # 7. BACKEND UNIT TESTS
+      # ========================================================
 
-      - name: Run unit tests
-        working-directory: services/${{ matrix.service }}
-        run: |
-          npm test -- --runInBand
-
-
-      # --------------------------------------------------------
-      # 6. Build application
-      # --------------------------------------------------------
-
-      - name: Build application
-        working-directory: services/${{ matrix.service }}
-        run: |
-          npm run build
+      - name: Run backend unit tests
+        if: matrix.type == 'backend'
+        working-directory: ${{ matrix.path }}
+        run: npm test
 
 
-      # --------------------------------------------------------
-      # 7. Dependency audit
-      # --------------------------------------------------------
+      # ========================================================
+      # 8. FRONTEND BUILD
+      # ========================================================
+
+      - name: Build frontend
+        if: matrix.type == 'frontend'
+        working-directory: ${{ matrix.path }}
+        run: npm run build
+
+
+      # ========================================================
+      # 9. NPM SECURITY AUDIT
+      # ========================================================
 
       - name: Dependency security audit
-        working-directory: services/${{ matrix.service }}
-        run: |
-          npm audit --audit-level=high
+        working-directory: ${{ matrix.path }}
+        run: npm audit --audit-level=high
 
 
-      # --------------------------------------------------------
-      # 8. Install Trivy
-      # --------------------------------------------------------
+      # ========================================================
+      # 10. INSTALL TRIVY
+      # ========================================================
 
       - name: Install Trivy
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget
+          sudo apt-get install -y wget gnupg
 
           wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key \
             | gpg --dearmor \
             | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
 
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
-            https://aquasecurity.github.io/trivy-repo/deb \
-            generic main" \
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
             | sudo tee /etc/apt/sources.list.d/trivy.list
 
           sudo apt-get update
           sudo apt-get install -y trivy
 
+          trivy --version
 
-      # --------------------------------------------------------
-      # 9. Trivy filesystem scan
-      # --------------------------------------------------------
+
+      # ========================================================
+      # 11. TRIVY FILESYSTEM SCAN
+      # ========================================================
 
       - name: Trivy filesystem scan
-        working-directory: services/${{ matrix.service }}
+        working-directory: ${{ matrix.path }}
         run: |
           trivy fs \
             --severity HIGH,CRITICAL \
             --exit-code 1 \
+            --no-progress \
             .
 
 
-      # --------------------------------------------------------
-      # 10. Configure AWS credentials
-      # --------------------------------------------------------
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-
-      # --------------------------------------------------------
-      # 11. Login to Amazon ECR
-      # --------------------------------------------------------
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-
-      # --------------------------------------------------------
-      # 12. Build Docker image
-      # --------------------------------------------------------
+      # ========================================================
+      # 12. BUILD LOCAL DOCKER IMAGE
+      #
+      # Runs on BOTH PR and push.
+      # This validates every Dockerfile.
+      # ========================================================
 
       - name: Build Docker image
-        working-directory: services/${{ matrix.service }}
+        working-directory: ${{ matrix.path }}
         run: |
           docker build \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
+            -t megamart/${{ matrix.service }}:${{ github.sha }} \
             .
 
 
-      # --------------------------------------------------------
-      # 13. Trivy Docker image scan
-      # --------------------------------------------------------
+      # ========================================================
+      # 13. DISPLAY DOCKER IMAGE
+      # ========================================================
+
+      - name: Display Docker image
+        run: |
+          docker images megamart/${{ matrix.service }}
+
+
+      # ========================================================
+      # 14. TRIVY DOCKER IMAGE SCAN
+      # ========================================================
 
       - name: Trivy Docker image scan
         run: |
           trivy image \
             --severity HIGH,CRITICAL \
             --exit-code 1 \
-            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+            --no-progress \
+            megamart/${{ matrix.service }}:${{ github.sha }}
 
 
-      # --------------------------------------------------------
-      # 14. Push Docker image to ECR
-      # --------------------------------------------------------
+      # ========================================================
+      # ECR STEPS
+      #
+      # These execute ONLY for:
+      #
+      # push -> Test
+      #
+      # They do NOT execute for Pull Requests.
+      # ========================================================
 
-      - name: Push Docker image to ECR
+
+      # ========================================================
+      # 15. CONFIGURE AWS CREDENTIALS
+      # ========================================================
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+
+      # ========================================================
+      # 16. VERIFY AWS IDENTITY
+      # ========================================================
+
+      - name: Verify AWS identity
+        if: github.event_name == 'push'
         run: |
-          docker push \
-            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          aws sts get-caller-identity
 
 
-      # --------------------------------------------------------
-      # 15. Create latest tag
-      # --------------------------------------------------------
+      # ========================================================
+      # 17. LOGIN TO AMAZON ECR
+      # ========================================================
 
-      - name: Tag image as latest
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+
+      # ========================================================
+      # 18. VERIFY ECR REPOSITORY
+      #
+      # Repository must already exist.
+      # CI does NOT create AWS infrastructure.
+      # ========================================================
+
+      - name: Verify ECR repository
+        if: github.event_name == 'push'
+        run: |
+          echo "Checking ECR repository:"
+          echo "${{ matrix.service }}"
+
+          aws ecr describe-repositories \
+            --repository-names "${{ matrix.service }}" \
+            --region "${{ env.AWS_REGION }}"
+
+
+      # ========================================================
+      # 19. TAG IMAGE WITH COMMIT SHA
+      # ========================================================
+
+      - name: Tag Docker image for ECR
+        if: github.event_name == 'push'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker tag \
-            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
-            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:latest
+            megamart/${{ matrix.service }}:${{ github.sha }} \
+            ${ECR_REGISTRY}/${{ matrix.service }}:${{ github.sha }}
 
 
-      # --------------------------------------------------------
-      # 16. Push latest tag
-      # --------------------------------------------------------
+      # ========================================================
+      # 20. PUSH COMMIT SHA IMAGE
+      # ========================================================
 
-      - name: Push latest image
+      - name: Push commit image to ECR
+        if: github.event_name == 'push'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker push \
-            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:latest
+            ${ECR_REGISTRY}/${{ matrix.service }}:${{ github.sha }}
 
 
-      # --------------------------------------------------------
-      # 17. Build summary
-      # --------------------------------------------------------
+      # ========================================================
+      # 21. TAG IMAGE AS LATEST
+      # ========================================================
+
+      - name: Tag image as latest
+        if: github.event_name == 'push'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker tag \
+            megamart/${{ matrix.service }}:${{ github.sha }} \
+            ${ECR_REGISTRY}/${{ matrix.service }}:latest
+
+
+      # ========================================================
+      # 22. PUSH LATEST IMAGE
+      # ========================================================
+
+      - name: Push latest image
+        if: github.event_name == 'push'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker push \
+            ${ECR_REGISTRY}/${{ matrix.service }}:latest
+
+
+      # ========================================================
+      # 23. CI SUMMARY
+      # ========================================================
 
       - name: Build summary
+        if: always()
         run: |
           echo "=========================================="
-          echo "BUILD SUCCESSFUL"
-          echo "Service: ${{ matrix.service }}"
-          echo "Image:"
-          echo "${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}"
+          echo "MegaMart CI Summary"
+          echo "=========================================="
+          echo "Service : ${{ matrix.service }}"
+          echo "Type    : ${{ matrix.type }}"
+          echo "Path    : ${{ matrix.path }}"
+          echo "Commit  : ${{ github.sha }}"
+          echo "Event   : ${{ github.event_name }}"
+          echo "=========================================="
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "ECR deployment was enabled for this run."
+          else
+            echo "Pull Request CI - ECR push was skipped."
+          fi
+
           echo "=========================================="
