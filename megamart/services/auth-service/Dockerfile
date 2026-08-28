@@ -1,8 +1,8 @@
 # ============================================================
-# Stage 1 - Dependencies
+# Stage 1 - Production Dependencies
 # ============================================================
 
-FROM node:22.23.2-alpine3.24 AS dependencies
+FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
@@ -12,14 +12,14 @@ RUN npm ci --omit=dev
 
 
 # ============================================================
-# Stage 2 - Runtime
+# Stage 2 - Production Runtime
 # ============================================================
 
-FROM node:22.23.2-alpine3.24 AS runtime
+FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
-# Install latest Alpine security patches
+# Apply Alpine security updates and remove npm from runtime
 RUN apk upgrade --no-cache \
     && rm -rf /usr/local/lib/node_modules/npm \
     && rm -f /usr/local/bin/npm \
@@ -28,10 +28,9 @@ RUN apk upgrade --no-cache \
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Copy production dependencies
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 
-# Copy application
+COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node src ./src
 
 USER node

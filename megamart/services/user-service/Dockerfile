@@ -1,5 +1,5 @@
 # ============================================================
-# Stage 1 - Install production dependencies
+# Stage 1 - Production Dependencies
 # ============================================================
 
 FROM node:22-alpine AS dependencies
@@ -12,14 +12,14 @@ RUN npm ci --omit=dev
 
 
 # ============================================================
-# Stage 2 - Production runtime
+# Stage 2 - Production Runtime
 # ============================================================
 
 FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
-# Apply Alpine security updates
+# Apply Alpine security updates and remove npm from runtime
 RUN apk upgrade --no-cache \
     && rm -rf /usr/local/lib/node_modules/npm \
     && rm -f /usr/local/bin/npm \
