@@ -1,0 +1,10 @@
+node_modules/
+.git/
+terraform/.terraform/
+*.tfstate
+Docker images
+build/
+dist/
+venv/
+.terraform/
+large SQL/database dumps

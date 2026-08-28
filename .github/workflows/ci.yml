@@ -1,0 +1,258 @@
+name: Microservices CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+
+  # ============================================================
+  # 1. BUILD + TEST + SECURITY + DOCKER + ECR
+  # ============================================================
+
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        service:
+          - auth-service
+          - user-service
+          - product-service
+          - cart-service
+          - order-service
+          - payment-service
+          - notification-service
+          - api-gateway
+          - frontend
+          - catalog-service
+          - inventory-service
+          - shipping-service
+          - recommendation-service
+          - review-service
+          - search-service
+          - pricing-service
+          - promotion-service
+          - wishlist-service
+          - analytics-service
+          - fraud-service
+          - invoice-service
+          - customer-service
+          - delivery-service
+          - support-service
+          - reporting-service
+
+    steps:
+
+      # --------------------------------------------------------
+      # 1. Checkout
+      # --------------------------------------------------------
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+
+      # --------------------------------------------------------
+      # 2. Display service
+      # --------------------------------------------------------
+
+      - name: Display service information
+        run: |
+          echo "=========================================="
+          echo "Service: ${{ matrix.service }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Branch:  ${{ github.ref_name }}"
+          echo "=========================================="
+
+
+      # --------------------------------------------------------
+      # 3. Set up Node.js
+      # --------------------------------------------------------
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+
+
+      # --------------------------------------------------------
+      # 4. Install dependencies
+      # --------------------------------------------------------
+
+      - name: Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: |
+          npm ci
+
+
+      # --------------------------------------------------------
+      # 5. Run unit tests
+      # --------------------------------------------------------
+
+      - name: Run unit tests
+        working-directory: services/${{ matrix.service }}
+        run: |
+          npm test -- --runInBand
+
+
+      # --------------------------------------------------------
+      # 6. Build application
+      # --------------------------------------------------------
+
+      - name: Build application
+        working-directory: services/${{ matrix.service }}
+        run: |
+          npm run build
+
+
+      # --------------------------------------------------------
+      # 7. Dependency audit
+      # --------------------------------------------------------
+
+      - name: Dependency security audit
+        working-directory: services/${{ matrix.service }}
+        run: |
+          npm audit --audit-level=high
+
+
+      # --------------------------------------------------------
+      # 8. Install Trivy
+      # --------------------------------------------------------
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+
+          wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
+            https://aquasecurity.github.io/trivy-repo/deb \
+            generic main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+
+      # --------------------------------------------------------
+      # 9. Trivy filesystem scan
+      # --------------------------------------------------------
+
+      - name: Trivy filesystem scan
+        working-directory: services/${{ matrix.service }}
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            .
+
+
+      # --------------------------------------------------------
+      # 10. Configure AWS credentials
+      # --------------------------------------------------------
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+
+      # --------------------------------------------------------
+      # 11. Login to Amazon ECR
+      # --------------------------------------------------------
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      # --------------------------------------------------------
+      # 12. Build Docker image
+      # --------------------------------------------------------
+
+      - name: Build Docker image
+        working-directory: services/${{ matrix.service }}
+        run: |
+          docker build \
+            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
+            .
+
+
+      # --------------------------------------------------------
+      # 13. Trivy Docker image scan
+      # --------------------------------------------------------
+
+      - name: Trivy Docker image scan
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+
+
+      # --------------------------------------------------------
+      # 14. Push Docker image to ECR
+      # --------------------------------------------------------
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push \
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+
+
+      # --------------------------------------------------------
+      # 15. Create latest tag
+      # --------------------------------------------------------
+
+      - name: Tag image as latest
+        run: |
+          docker tag \
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:latest
+
+
+      # --------------------------------------------------------
+      # 16. Push latest tag
+      # --------------------------------------------------------
+
+      - name: Push latest image
+        run: |
+          docker push \
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:latest
+
+
+      # --------------------------------------------------------
+      # 17. Build summary
+      # --------------------------------------------------------
+
+      - name: Build summary
+        run: |
+          echo "=========================================="
+          echo "BUILD SUCCESSFUL"
+          echo "Service: ${{ matrix.service }}"
+          echo "Image:"
+          echo "${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}"
+          echo "=========================================="
