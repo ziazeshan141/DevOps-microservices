@@ -85,7 +85,17 @@ jobs:
       # --------------------------------------------------------
       # 3. Set up Node.js
       # --------------------------------------------------------
+      - name: Debug repository structure
+        run: |
+          echo "Current directory:"
+            pwd
 
+          echo "Repository structure:"
+          ls -R
+
+          echo "Package lock files:"
+          find . -name "package-lock.json" -print
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
