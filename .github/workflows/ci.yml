@@ -55,7 +55,7 @@ jobs:
             type: backend
 
           - service: inventory-service
-            path: services/inventory-service
+            path: megamart/services/inventory-service
             type: backend
 
           - service: cart-service
@@ -153,7 +153,7 @@ jobs:
 
 
       # ========================================================
-      # 2. DISPLAY SERVICE INFO
+      # 2. DISPLAY SERVICE INFORMATION
       # ========================================================
 
       - name: Display service information
@@ -161,24 +161,31 @@ jobs:
           echo "=========================================="
           echo "MegaMart CI"
           echo "=========================================="
-          echo "Service: ${{ matrix.service }}"
-          echo "Type:    ${{ matrix.type }}"
-          echo "Path:    ${{ matrix.path }}"
-          echo "Commit:  ${{ github.sha }}"
-          echo "Branch:  ${{ github.ref_name }}"
-          echo "Event:   ${{ github.event_name }}"
+          echo "Service : ${{ matrix.service }}"
+          echo "Type    : ${{ matrix.type }}"
+          echo "Path    : ${{ matrix.path }}"
+          echo "Commit  : ${{ github.sha }}"
+          echo "Branch  : ${{ github.ref_name }}"
+          echo "Event   : ${{ github.event_name }}"
           echo "=========================================="
 
 
       # ========================================================
-      # 3. VERIFY SERVICE DIRECTORY
+      # 3. VERIFY PROJECT FILES
       # ========================================================
 
       - name: Verify project files
         run: |
-          echo "Checking directory:"
-          echo "${{ matrix.path }}"
+          echo "=========================================="
+          echo "Checking ${{ matrix.service }}"
+          echo "=========================================="
+
+          echo "Repository root:"
+          pwd
+
           echo ""
+          echo "Service path:"
+          echo "${{ matrix.path }}"
 
           if [ ! -d "${{ matrix.path }}" ]; then
             echo "ERROR: Directory does not exist:"
@@ -186,9 +193,8 @@ jobs:
             exit 1
           fi
 
-          echo "Directory exists."
           echo ""
-
+          echo "Directory exists:"
           ls -la "${{ matrix.path }}"
 
           echo ""
@@ -199,7 +205,7 @@ jobs:
             exit 1
           fi
 
-          echo "package.json found."
+          echo "package.json found"
 
           echo ""
           echo "Checking package-lock.json..."
@@ -207,13 +213,13 @@ jobs:
           if [ ! -f "${{ matrix.path }}/package-lock.json" ]; then
             echo "ERROR: package-lock.json not found"
             echo ""
-            echo "Generate it locally using:"
+            echo "Generate it locally:"
             echo "cd ${{ matrix.path }}"
             echo "npm install"
             exit 1
           fi
 
-          echo "package-lock.json found."
+          echo "package-lock.json found"
 
           echo ""
           echo "Checking Dockerfile..."
@@ -223,7 +229,10 @@ jobs:
             exit 1
           fi
 
-          echo "Dockerfile found."
+          echo "Dockerfile found"
+
+          echo ""
+          echo "All required files found"
 
 
       # ========================================================
@@ -239,15 +248,15 @@ jobs:
 
 
       # ========================================================
-      # 5. DISPLAY NODE/NPM VERSIONS
+      # 5. NODE/NPM VERSION
       # ========================================================
 
       - name: Display Node.js versions
         run: |
-          echo "Node version:"
+          echo "Node:"
           node --version
 
-          echo "NPM version:"
+          echo "NPM:"
           npm --version
 
 
@@ -261,7 +270,7 @@ jobs:
 
 
       # ========================================================
-      # 7. BACKEND UNIT TESTS
+      # 7. BACKEND TESTS
       # ========================================================
 
       - name: Run backend unit tests
@@ -294,21 +303,10 @@ jobs:
       # ========================================================
 
       - name: Install Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-
-          wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key \
-            | gpg --dearmor \
-            | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
-            | sudo tee /etc/apt/sources.list.d/trivy.list
-
-          sudo apt-get update
-          sudo apt-get install -y trivy
-
-          trivy --version
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+        with:
+          version: v0.68.2
+          cache: true
 
 
       # ========================================================
@@ -326,10 +324,7 @@ jobs:
 
 
       # ========================================================
-      # 12. BUILD LOCAL DOCKER IMAGE
-      #
-      # Runs on BOTH PR and push.
-      # This validates every Dockerfile.
+      # 12. BUILD DOCKER IMAGE
       # ========================================================
 
       - name: Build Docker image
@@ -350,7 +345,7 @@ jobs:
 
 
       # ========================================================
-      # 14. TRIVY DOCKER IMAGE SCAN
+      # 14. TRIVY IMAGE SCAN
       # ========================================================
 
       - name: Trivy Docker image scan
@@ -363,13 +358,10 @@ jobs:
 
 
       # ========================================================
-      # ECR STEPS
+      # AWS / ECR
       #
-      # These execute ONLY for:
-      #
-      # push -> Test
-      #
-      # They do NOT execute for Pull Requests.
+      # Only runs when code is PUSHED to Test.
+      # Pull requests do not push images.
       # ========================================================
 
 
@@ -379,7 +371,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: github.event_name == 'push'
-        uses: aws-actions/configure-aws-credentials@v6.2.3
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -397,20 +389,17 @@ jobs:
 
 
       # ========================================================
-      # 17. LOGIN TO AMAZON ECR
+      # 17. LOGIN TO ECR
       # ========================================================
 
       - name: Login to Amazon ECR
         if: github.event_name == 'push'
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2.1.6
+        uses: aws-actions/amazon-ecr-login@v2
 
 
       # ========================================================
       # 18. VERIFY ECR REPOSITORY
-      #
-      # Repository must already exist.
-      # CI does NOT create AWS infrastructure.
       # ========================================================
 
       - name: Verify ECR repository
@@ -479,7 +468,7 @@ jobs:
 
 
       # ========================================================
-      # 23. CI SUMMARY
+      # 23. BUILD SUMMARY
       # ========================================================
 
       - name: Build summary
@@ -496,9 +485,9 @@ jobs:
           echo "=========================================="
 
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "ECR deployment was enabled for this run."
+            echo "AWS/ECR steps enabled"
           else
-            echo "Pull Request CI - ECR push was skipped."
+            echo "Pull request: AWS/ECR push skipped"
           fi
 
           echo "=========================================="
