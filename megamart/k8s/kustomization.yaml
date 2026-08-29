@@ -77,3 +77,12 @@ resources:
   - services/analytics-service.yaml
   - services/fraud-service.yaml
   - services/frontend.yaml
+  # existing resources...
+  - ingress/ingress.yaml
+
+  # Autoscaling
+  - autoscaling/api-gateway-hpa.yaml
+  - autoscaling/frontend-hpa.yaml
+
+  # Monitoring
+  - monitoring/megamart-servicemonitor.yaml
