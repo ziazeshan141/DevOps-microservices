@@ -1,9 +1,18 @@
-const express = require('express');
+﻿const express = require('express');
+const {
+  metricsMiddleware,
+  metricsHandler,
+} = require('./metrics');
 const routes = require('./routes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 
 const app = express();
+
+app.use(metricsMiddleware);
+
+app.get('/metrics', metricsHandler);
+
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
@@ -19,3 +28,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+

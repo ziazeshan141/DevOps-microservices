@@ -6,7 +6,12 @@ const port = Number(process.env.PORT || 3018);
 
 async function start() {
   await initSchema();
-  app.listen(port, () => console.log('address-service listening on http://localhost:' + port));
+
+  app.listen(port, () =>
+    console.log(
+      'address-service listening on http://localhost:' + port
+    )
+  );
 }
 
 start().catch((error) => {

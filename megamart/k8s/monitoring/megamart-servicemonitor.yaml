@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+
+metadata:
+  name: megamart-services
+  namespace: monitoring
+
+  labels:
+    app.kubernetes.io/name: megamart
+    app.kubernetes.io/part-of: megamart
+
+spec:
+
+  # Look for Services inside the MegaMart namespace
+  namespaceSelector:
+    matchNames:
+      - megamart
+
+  # Monitor Services having this label
+  selector:
+    matchLabels:
+      monitoring: prometheus
+
+  # Scrape their named "http" port
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

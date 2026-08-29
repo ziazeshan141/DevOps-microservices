@@ -1,3 +1,7 @@
+# ============================================================
+# EKS Access Entries
+# ============================================================
+
 locals {
   access_entries = var.admin_principal_arn == null ? {} : {
 
@@ -18,7 +22,75 @@ locals {
   }
 }
 
+
+# ============================================================
+# EBS CSI DRIVER - POD IDENTITY IAM ROLE
+# ============================================================
+
+data "aws_iam_policy_document" "ebs_csi_pod_identity_assume_role" {
+
+  statement {
+    sid    = "AllowEksPodIdentity"
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "pods.eks.amazonaws.com"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/kubernetes-namespace"
+
+      values = [
+        "kube-system"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/kubernetes-service-account"
+
+      values = [
+        "ebs-csi-controller-sa"
+      ]
+    }
+  }
+}
+
+
+resource "aws_iam_role" "ebs_csi" {
+
+  name = "${var.cluster_name}-ebs-csi-role"
+
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_pod_identity_assume_role.json
+
+  tags = var.tags
+}
+
+
+resource "aws_iam_role_policy_attachment" "ebs_csi" {
+
+  role = aws_iam_role.ebs_csi.name
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2"
+}
+
+
+# ============================================================
+# EKS
+# ============================================================
+
 module "eks" {
+
   source  = "terraform-aws-modules/eks/aws"
   version = "21.25.0"
 
@@ -31,16 +103,31 @@ module "eks" {
 
   access_entries = local.access_entries
 
+
+  # ==========================================================
+  # API ENDPOINT
+  # ==========================================================
+
   endpoint_private_access = true
   endpoint_public_access  = true
 
   endpoint_public_access_cidrs = var.endpoint_public_access_cidrs
+
+
+  # ==========================================================
+  # CONTROL PLANE LOGGING
+  # ==========================================================
 
   enabled_log_types = [
     "api",
     "audit",
     "authenticator"
   ]
+
+
+  # ==========================================================
+  # EKS ADDONS
+  # ==========================================================
 
   addons = {
 
@@ -55,11 +142,38 @@ module "eks" {
     vpc-cni = {
       before_compute = true
     }
+
+
+    # --------------------------------------------------------
+    # Amazon EBS CSI Driver
+    # --------------------------------------------------------
+
+    aws-ebs-csi-driver = {
+
+      most_recent = true
+
+      pod_identity_association = [
+        {
+          service_account = "ebs-csi-controller-sa"
+          role_arn        = aws_iam_role.ebs_csi.arn
+        }
+      ]
+    }
   }
+
+
+  # ==========================================================
+  # NETWORK
+  # ==========================================================
 
   vpc_id = var.vpc_id
 
   subnet_ids = var.private_subnet_ids
+
+
+  # ==========================================================
+  # MANAGED NODE GROUP
+  # ==========================================================
 
   eks_managed_node_groups = {
 
@@ -86,6 +200,11 @@ module "eks" {
       }
     }
   }
+
+
+  # ==========================================================
+  # TAGS
+  # ==========================================================
 
   tags = var.tags
 }
