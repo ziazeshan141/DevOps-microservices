@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+
+metadata:
+  name: megamart
+
+  labels:
+    app.kubernetes.io/name: megamart
+    app.kubernetes.io/part-of: megamart
+    environment: dev

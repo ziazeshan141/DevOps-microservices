@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: megamart
+  labels:
+    app: search-service
+    monitoring: prometheus
+
+spec:
+  type: ClusterIP
+  selector:
+    app: search-service
+
+  ports:
+    - name: http
+      port: 3013
+      targetPort: http

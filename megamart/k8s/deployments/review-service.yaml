@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+  namespace: megamart
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: review-service
+
+  template:
+    metadata:
+      labels:
+        app: review-service
+
+    spec:
+      containers:
+        - name: review-service
+          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/review-service:latest
+
+          ports:
+            - name: http
+              containerPort: 3011
+
+          envFrom:
+            - configMapRef:
+                name: megamart-config
+            - secretRef:
+                name: megamart-secrets
+
+          env:
+            - name: PORT
+              value: "3011"
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_PASSWORD
+
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/review_db"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10

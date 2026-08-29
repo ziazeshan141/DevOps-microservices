@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rating-service
+  namespace: megamart
+  labels:
+    app: rating-service
+    monitoring: prometheus
+
+spec:
+  type: ClusterIP
+  selector:
+    app: rating-service
+
+  ports:
+    - name: http
+      port: 3012
+      targetPort: http

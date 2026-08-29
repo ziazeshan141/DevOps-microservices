@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: megamart
+  labels:
+    app: payment-service
+    monitoring: prometheus
+
+spec:
+  type: ClusterIP
+  selector:
+    app: payment-service
+
+  ports:
+    - name: http
+      port: 3008
+      targetPort: http

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: megamart
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: order-service
+
+  template:
+    metadata:
+      labels:
+        app: order-service
+
+    spec:
+      containers:
+        - name: order-service
+          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/order-service:latest
+
+          ports:
+            - name: http
+              containerPort: 3007
+
+          envFrom:
+            - configMapRef:
+                name: megamart-config
+            - secretRef:
+                name: megamart-secrets
+
+          env:
+            - name: PORT
+              value: "3007"
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_PASSWORD
+
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/order_db"
+
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: RABBITMQ_USER
+
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: RABBITMQ_PASSWORD
+
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@rabbitmq:5672"
+
+            - name: EVENT_EXCHANGE
+              value: "megamart.events"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30

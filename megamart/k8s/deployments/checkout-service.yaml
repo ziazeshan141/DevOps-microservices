@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-service
+  namespace: megamart
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: checkout-service
+
+  template:
+    metadata:
+      labels:
+        app: checkout-service
+
+    spec:
+      containers:
+        - name: checkout-service
+          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/checkout-service:latest
+
+          ports:
+            - name: http
+              containerPort: 3019
+
+          envFrom:
+            - configMapRef:
+                name: megamart-config
+            - secretRef:
+                name: megamart-secrets
+
+          env:
+            - name: PORT
+              value: "3019"
+
+            - name: CART_SERVICE_URL
+              value: "http://cart-service:3006"
+
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3003"
+
+            - name: PRICING_SERVICE_URL
+              value: "http://pricing-service:3015"
+
+            - name: PROMOTION_SERVICE_URL
+              value: "http://promotion-service:3016"
+
+            - name: INVENTORY_SERVICE_URL
+              value: "http://inventory-service:3005"
+
+            - name: FRAUD_SERVICE_URL
+              value: "http://fraud-service:3024"
+
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-service:3008"
+
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:3007"
+
+            - name: SHIPPING_SERVICE_URL
+              value: "http://shipping-service:3009"
+
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-service:3010"
+
+            - name: ANALYTICS_SERVICE_URL
+              value: "http://analytics-service:3023"
+
+            - name: ADDRESS_SERVICE_URL
+              value: "http://address-service:3018"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10

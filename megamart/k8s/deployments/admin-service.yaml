@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+  namespace: megamart
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: admin-service
+
+  template:
+    metadata:
+      labels:
+        app: admin-service
+
+    spec:
+      containers:
+        - name: admin-service
+          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/admin-service:latest
+
+          ports:
+            - name: http
+              containerPort: 3021
+
+          envFrom:
+            - configMapRef:
+                name: megamart-config
+            - secretRef:
+                name: megamart-secrets
+
+          env:
+            - name: PORT
+              value: "3021"
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: megamart-secrets
+                  key: POSTGRES_PASSWORD
+
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/admin_db"
+
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3003"
+
+            - name: INVENTORY_SERVICE_URL
+              value: "http://inventory-service:3005"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10

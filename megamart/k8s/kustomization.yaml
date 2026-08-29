@@ -1,0 +1,79 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+
+  # Base
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+
+  # PostgreSQL
+  - infrastructure/postgres/init-configmap.yaml
+  - infrastructure/postgres/pvc.yaml
+  - infrastructure/postgres/statefulset.yaml
+  - infrastructure/postgres/service.yaml
+
+  # Redis
+  - infrastructure/redis/pvc.yaml
+  - infrastructure/redis/statefulset.yaml
+  - infrastructure/redis/service.yaml
+
+  # RabbitMQ
+  - infrastructure/rabbitmq/pvc.yaml
+  - infrastructure/rabbitmq/statefulset.yaml
+  - infrastructure/rabbitmq/service.yaml
+
+  # Deployments
+  - deployments/auth-service.yaml
+  - deployments/user-service.yaml
+  - deployments/product-service.yaml
+  - deployments/catalog-service.yaml
+  - deployments/inventory-service.yaml
+  - deployments/cart-service.yaml
+  - deployments/order-service.yaml
+  - deployments/payment-service.yaml
+  - deployments/shipping-service.yaml
+  - deployments/notification-service.yaml
+  - deployments/review-service.yaml
+  - deployments/rating-service.yaml
+  - deployments/search-service.yaml
+  - deployments/recommendation-service.yaml
+  - deployments/pricing-service.yaml
+  - deployments/promotion-service.yaml
+  - deployments/wishlist-service.yaml
+  - deployments/address-service.yaml
+  - deployments/checkout-service.yaml
+  - deployments/api-gateway.yaml
+  - deployments/admin-service.yaml
+  - deployments/media-service.yaml
+  - deployments/analytics-service.yaml
+  - deployments/fraud-service.yaml
+  - deployments/frontend.yaml
+
+  # Services
+  - services/auth-service.yaml
+  - services/user-service.yaml
+  - services/product-service.yaml
+  - services/catalog-service.yaml
+  - services/inventory-service.yaml
+  - services/cart-service.yaml
+  - services/order-service.yaml
+  - services/payment-service.yaml
+  - services/shipping-service.yaml
+  - services/notification-service.yaml
+  - services/review-service.yaml
+  - services/rating-service.yaml
+  - services/search-service.yaml
+  - services/recommendation-service.yaml
+  - services/pricing-service.yaml
+  - services/promotion-service.yaml
+  - services/wishlist-service.yaml
+  - services/address-service.yaml
+  - services/checkout-service.yaml
+  - services/api-gateway.yaml
+  - services/admin-service.yaml
+  - services/media-service.yaml
+  - services/analytics-service.yaml
+  - services/fraud-service.yaml
+  - services/frontend.yaml

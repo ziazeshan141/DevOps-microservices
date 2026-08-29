@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-service
+  namespace: megamart
+  labels:
+    app: media-service
+    monitoring: prometheus
+
+spec:
+  type: ClusterIP
+  selector:
+    app: media-service
+
+  ports:
+    - name: http
+      port: 3022
+      targetPort: http

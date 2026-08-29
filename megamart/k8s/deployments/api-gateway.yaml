@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: megamart
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: api-gateway
+
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+
+    spec:
+      containers:
+        - name: api-gateway
+          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/api-gateway:latest
+
+          ports:
+            - name: http
+              containerPort: 3020
+
+          envFrom:
+            - configMapRef:
+                name: megamart-config
+            - secretRef:
+                name: megamart-secrets
+
+          env:
+            - name: PORT
+              value: "3020"
+
+            - name: AUTH_SERVICE_URL
+              value: "http://auth-service:3001"
+
+            - name: USER_SERVICE_URL
+              value: "http://user-service:3002"
+
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3003"
+
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog-service:3004"
+
+            - name: INVENTORY_SERVICE_URL
+              value: "http://inventory-service:3005"
+
+            - name: CART_SERVICE_URL
+              value: "http://cart-service:3006"
+
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:3007"
+
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-service:3008"
+
+            - name: SHIPPING_SERVICE_URL
+              value: "http://shipping-service:3009"
+
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-service:3010"
+
+            - name: REVIEW_SERVICE_URL
+              value: "http://review-service:3011"
+
+            - name: RATING_SERVICE_URL
+              value: "http://rating-service:3012"
+
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service:3013"
+
+            - name: RECOMMENDATION_SERVICE_URL
+              value: "http://recommendation-service:3014"
+
+            - name: PRICING_SERVICE_URL
+              value: "http://pricing-service:3015"
+
+            - name: PROMOTION_SERVICE_URL
+              value: "http://promotion-service:3016"
+
+            - name: WISHLIST_SERVICE_URL
+              value: "http://wishlist-service:3017"
+
+            - name: ADDRESS_SERVICE_URL
+              value: "http://address-service:3018"
+
+            - name: CHECKOUT_SERVICE_URL
+              value: "http://checkout-service:3019"
+
+            - name: ADMIN_SERVICE_URL
+              value: "http://admin-service:3021"
+
+            - name: MEDIA_SERVICE_URL
+              value: "http://media-service:3022"
+
+            - name: ANALYTICS_SERVICE_URL
+              value: "http://analytics-service:3023"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 750m
+              memory: 512Mi
