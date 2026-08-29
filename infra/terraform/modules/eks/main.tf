@@ -1,51 +1,89 @@
+locals {
+  access_entries = var.admin_principal_arn == null ? {} : {
+
+    admin = {
+      principal_arn = var.admin_principal_arn
+
+      policy_associations = {
+        cluster_admin = {
+
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.24"
+  version = "21.25.0"
 
-  cluster_name    = "${var.name}-eks"
-  cluster_version = var.cluster_version
+  name               = var.cluster_name
+  kubernetes_version = var.kubernetes_version
 
-  cluster_endpoint_public_access       = var.cluster_endpoint_public_access
-  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
-
-  vpc_id     = var.vpc_id
-  subnet_ids = var.subnet_ids
+  authentication_mode = "API"
 
   enable_cluster_creator_admin_permissions = true
 
-  cluster_addons = {
-    coredns = {
-      most_recent = true
+  access_entries = local.access_entries
+
+  endpoint_private_access = true
+  endpoint_public_access  = true
+
+  endpoint_public_access_cidrs = var.endpoint_public_access_cidrs
+
+  enabled_log_types = [
+    "api",
+    "audit",
+    "authenticator"
+  ]
+
+  addons = {
+
+    coredns = {}
+
+    eks-pod-identity-agent = {
+      before_compute = true
     }
-    kube-proxy = {
-      most_recent = true
-    }
+
+    kube-proxy = {}
+
     vpc-cni = {
-      most_recent = true
-    }
-    aws-ebs-csi-driver = {
-      most_recent = true
+      before_compute = true
     }
   }
 
-  eks_managed_node_group_defaults = {
-    ami_type                = "AL2023_x86_64_STANDARD"
-    instance_types          = var.node_instance_types
-    vpc_security_group_ids  = var.extra_node_security_group_ids
-  }
+  vpc_id = var.vpc_id
+
+  subnet_ids = var.private_subnet_ids
 
   eks_managed_node_groups = {
-    default = {
-      min_size     = var.node_min_size
-      max_size     = var.node_max_size
-      desired_size = var.node_desired_size
+
+    general = {
+
+      ami_type = "AL2023_x86_64_STANDARD"
+
+      capacity_type = "ON_DEMAND"
 
       instance_types = var.node_instance_types
-      capacity_type  = var.node_capacity_type
 
-      labels = var.node_labels
+      min_size     = var.node_min_size
+      desired_size = var.node_desired_size
+      max_size     = var.node_max_size
 
-      tags = var.tags
+      disk_size = 50
+
+      labels = {
+        workload = "general"
+      }
+
+      update_config = {
+        max_unavailable_percentage = 33
+      }
     }
   }
 

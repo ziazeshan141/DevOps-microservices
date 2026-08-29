@@ -1,46 +1,60 @@
 variable "aws_region" {
-  type    = string
-  default = "us-east-1"
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "project_name" {
-  type    = string
-  default = "myapp"
+  description = "Project name"
+  type        = string
+  default     = "megamart"
 }
 
 variable "environment" {
-  type    = string
-  default = "dev"
+  description = "Environment name"
+  type        = string
+  default     = "dev"
 }
 
 variable "vpc_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
+  description = "VPC CIDR"
+  type        = string
+  default     = "10.20.0.0/16"
 }
 
 variable "azs" {
-  type    = list(string)
-  default = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  description = "Availability zones"
+  type        = list(string)
+  default     = []
 }
 
-variable "private_subnet_cidrs" {
-  type    = list(string)
-  default = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+variable "single_nat_gateway" {
+  description = "Use one NAT gateway"
+  type        = bool
+  default     = true
 }
 
-variable "public_subnet_cidrs" {
-  type    = list(string)
-  default = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+variable "kubernetes_version" {
+  description = "EKS Kubernetes version"
+  type        = string
+  default     = "1.36"
 }
 
-variable "cluster_version" {
-  type    = string
-  default = "1.30"
+variable "eks_endpoint_public_access_cidrs" {
+  description = "CIDRs allowed to access EKS public endpoint"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
 
 variable "node_instance_types" {
-  type    = list(string)
-  default = ["t3.medium"]
+  description = "EKS worker node instance types"
+  type        = list(string)
+  default     = ["t3.large"]
+}
+
+variable "node_min_size" {
+  type    = number
+  default = 2
 }
 
 variable "node_desired_size" {
@@ -48,64 +62,31 @@ variable "node_desired_size" {
   default = 2
 }
 
-variable "node_min_size" {
-  type    = number
-  default = 1
-}
-
 variable "node_max_size" {
   type    = number
-  default = 4
+  default = 6
 }
 
-variable "ecr_repository_names" {
-  description = "List of ECR repository names to create (1 frontend + 24 backend microservices)"
-  type        = list(string)
-  default = [
-    "frontend",
-    "address-service",
-    "admin-service",
-    "analytics-service",
-    "api-gateway",
-    "auth-service",
-    "cart-service",
-    "catalog-service",
-    "checkout-service",
-    "fraud-service",
-    "inventory-service",
-    "media-service",
-    "notification-service",
-    "order-service",
-    "payment-service",
-    "pricing-service",
-    "product-service",
-    "promotion-service",
-    "rating-service",
-    "recommendation-service",
-    "review-service",
-    "search-service",
-    "shipping-service",
-    "user-service",
-    "wishlist-service",
-  ]
+variable "eks_admin_principal_arn" {
+  description = "Optional IAM principal for EKS admin access"
+  type        = string
+  default     = null
+  nullable    = true
 }
 
-variable "cluster_endpoint_public_access_cidrs" {
-  type    = list(string)
-  default = ["0.0.0.0/0"] # tighten in production
+variable "github_repository" {
+  description = "GitHub repo OWNER/REPOSITORY"
+  type        = string
 }
 
-variable "irsa_namespace" {
-  type    = string
-  default = "default"
+variable "github_branch" {
+  description = "GitHub branch"
+  type        = string
+  default     = "Test"
 }
 
-variable "irsa_service_account_name" {
-  type    = string
-  default = "app-service-account"
-}
-
-variable "tags" {
-  type    = map(string)
-  default = {}
+variable "ecr_image_retention_count" {
+  description = "Number of ECR images to keep"
+  type        = number
+  default     = 30
 }

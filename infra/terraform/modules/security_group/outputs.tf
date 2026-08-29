@@ -1,9 +1,9 @@
-output "node_extra_security_group_id" {
-  description = "ID of the additional node security group"
-  value       = aws_security_group.node_extra.id
+output "alb_security_group_id" {
+  description = "Security group ID for the public ALB."
+  value       = module.alb.id
 }
 
-output "admin_access_security_group_id" {
-  description = "ID of the admin/bastion access security group"
-  value       = aws_security_group.admin_access.id
+output "data_security_group_id" {
+  description = "Security group ID for data services."
+  value       = module.data.id
 }

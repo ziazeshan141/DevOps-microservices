@@ -1,54 +1,13 @@
-locals {
-  name = "${var.project_name}-${var.environment}"
-
-  common_tags = merge(
-    {
-      Project     = var.project_name
-      Environment = var.environment
-      ManagedBy   = "terraform"
-    },
-    var.tags
-  )
-}
-
 module "vpc" {
   source = "../../modules/vpc"
 
-  name                   = local.name
-  cidr                   = var.vpc_cidr
-  azs                    = var.azs
-  private_subnet_cidrs   = var.private_subnet_cidrs
-  public_subnet_cidrs    = var.public_subnet_cidrs
-  single_nat_gateway     = var.environment != "prod"
-  cluster_name_for_tags  = "${local.name}-eks"
-  tags                   = local.common_tags
-}
-
-module "security_group" {
-  source = "../../modules/security_group"
-
-  name     = local.name
-  vpc_id   = module.vpc.vpc_id
-  vpc_cidr = module.vpc.vpc_cidr_block
-  tags     = local.common_tags
-}
-
-module "eks" {
-  source = "../../modules/eks"
-
-  name       = local.name
-  cluster_version = var.cluster_version
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnet_ids
-
-  extra_node_security_group_ids = [module.security_group.node_extra_security_group_id]
-
-  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
-
-  node_instance_types = var.node_instance_types
-  node_desired_size   = var.node_desired_size
-  node_min_size       = var.node_min_size
-  node_max_size       = var.node_max_size
+  name               = local.cluster_name
+  cidr               = var.vpc_cidr
+  azs                = local.azs
+  public_subnets     = local.public_subnets
+  private_subnets    = local.private_subnets
+  cluster_name       = local.cluster_name
+  single_nat_gateway = var.single_nat_gateway
 
   tags = local.common_tags
 }
@@ -56,10 +15,8 @@ module "eks" {
 module "ecr" {
   source = "../../modules/ecr"
 
-  name_prefix      = local.name
-  repository_names = var.ecr_repository_names
-
-  pull_principal_arns = [module.eks.node_iam_role_arn]
+  repository_names      = local.ecr_repositories
+  image_retention_count = var.ecr_image_retention_count
 
   tags = local.common_tags
 }
@@ -67,15 +24,39 @@ module "ecr" {
 module "iam" {
   source = "../../modules/iam"
 
-  name = local.name
+  name                = local.cluster_name
+  github_repository   = var.github_repository
+  github_branch       = var.github_branch
+  ecr_repository_arns = module.ecr.repository_arns
 
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  oidc_provider_url = module.eks.oidc_provider
+  tags = local.common_tags
+}
 
-  irsa_namespace             = var.irsa_namespace
-  irsa_service_account_name  = var.irsa_service_account_name
+module "eks" {
+  source = "../../modules/eks"
 
-  node_iam_role_name = module.eks.node_iam_role_name
+  cluster_name                 = local.cluster_name
+  kubernetes_version           = var.kubernetes_version
+  vpc_id                       = module.vpc.vpc_id
+  private_subnet_ids           = module.vpc.private_subnet_ids
+  endpoint_public_access_cidrs = var.eks_endpoint_public_access_cidrs
+
+  node_instance_types = var.node_instance_types
+  node_min_size       = var.node_min_size
+  node_desired_size   = var.node_desired_size
+  node_max_size       = var.node_max_size
+
+  admin_principal_arn = var.eks_admin_principal_arn
+
+  tags = local.common_tags
+}
+
+module "security_groups" {
+  source = "../../modules/security_group"
+
+  name                       = local.cluster_name
+  vpc_id                     = module.vpc.vpc_id
+  eks_node_security_group_id = module.eks.node_security_group_id
 
   tags = local.common_tags
 }

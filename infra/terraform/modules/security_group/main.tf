@@ -1,64 +1,99 @@
-resource "aws_security_group" "node_extra" {
-  name        = "${var.name}-node-extra-sg"
-  description = "Additional rules for EKS worker nodes"
-  vpc_id      = var.vpc_id
+module "alb" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "6.0.0"
 
-  tags = merge(var.tags, {
-    Name = "${var.name}-node-extra-sg"
-  })
-}
+  name = "${var.name}-alb"
 
-resource "aws_security_group_rule" "node_extra_ingress_vpc" {
-  type              = "ingress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "tcp"
-  cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.node_extra.id
-  description       = "Allow all TCP traffic from within the VPC"
-}
+  description = "Public ALB security group for MegaMart"
 
-resource "aws_security_group_rule" "node_extra_ingress_https" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = var.node_ingress_https_cidrs
-  security_group_id = aws_security_group.node_extra.id
-  description       = "Allow HTTPS from configured CIDRs"
-}
+  vpc_id = var.vpc_id
 
-resource "aws_security_group_rule" "node_extra_egress_all" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.node_extra.id
-  description       = "Allow all outbound traffic"
-}
+  ingress_rules = {
 
-resource "aws_security_group" "admin_access" {
-  name        = "${var.name}-admin-access-sg"
-  description = "SG for admin/bastion access to cluster resources"
-  vpc_id      = var.vpc_id
+    http = {
+      from_port   = 80
+      to_port     = 80
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
 
-  ingress {
-    description = "SSH from trusted CIDRs only"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.admin_ssh_cidrs
+      description = "HTTP from internet"
+    }
+
+    https = {
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+
+      description = "HTTPS from internet"
+    }
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  egress_rules = {
+
+    all = {
+      ip_protocol = "-1"
+      cidr_ipv4   = "0.0.0.0/0"
+
+      description = "All outbound traffic"
+    }
   }
 
-  tags = merge(var.tags, {
-    Name = "${var.name}-admin-access-sg"
-  })
+  tags = var.tags
+}
+
+module "data" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "6.0.0"
+
+  name = "${var.name}-data"
+
+  description = "Data services access from EKS nodes"
+
+  vpc_id = var.vpc_id
+
+  ingress_rules = {
+
+    postgres = {
+      from_port    = 5432
+      to_port      = 5432
+      ip_protocol  = "tcp"
+
+      referenced_security_group_id = var.eks_node_security_group_id
+
+      description = "PostgreSQL from EKS nodes"
+    }
+
+    redis = {
+      from_port   = 6379
+      to_port     = 6379
+      ip_protocol = "tcp"
+
+      referenced_security_group_id = var.eks_node_security_group_id
+
+      description = "Redis from EKS nodes"
+    }
+
+    rabbitmq = {
+      from_port   = 5672
+      to_port     = 5672
+      ip_protocol = "tcp"
+
+      referenced_security_group_id = var.eks_node_security_group_id
+
+      description = "RabbitMQ from EKS nodes"
+    }
+  }
+
+  egress_rules = {
+
+    all = {
+      ip_protocol = "-1"
+      cidr_ipv4   = "0.0.0.0/0"
+
+      description = "All outbound traffic"
+    }
+  }
+
+  tags = var.tags
 }

@@ -1,83 +1,113 @@
-data "aws_iam_policy_document" "irsa_ecr_assume_role" {
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  tags = var.tags
+}
+
+data "aws_iam_policy_document" "github_assume_role" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity"
+    ]
 
     principals {
-      type        = "Federated"
-      identifiers = [var.oidc_provider_arn]
+      type = "Federated"
+
+      identifiers = [
+        aws_iam_openid_connect_provider.github.arn
+      ]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${var.oidc_provider_url}:sub"
-      values   = ["system:serviceaccount:${var.irsa_namespace}:${var.irsa_service_account_name}"]
+      variable = "token.actions.githubusercontent.com:aud"
+
+      values = [
+        "sts.amazonaws.com"
+      ]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${var.oidc_provider_url}:aud"
-      values   = ["sts.amazonaws.com"]
+      variable = "token.actions.githubusercontent.com:sub"
+
+      values = [
+        "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+      ]
     }
   }
 }
 
-resource "aws_iam_role" "irsa_ecr_read" {
-  name               = "${var.name}-irsa-ecr-read"
-  assume_role_policy = data.aws_iam_policy_document.irsa_ecr_assume_role.json
-  tags               = var.tags
+resource "aws_iam_role" "github_actions" {
+  name = "${var.name}-github-actions"
+
+  assume_role_policy = data.aws_iam_policy_document.github_assume_role.json
+
+  tags = var.tags
 }
 
-resource "aws_iam_role_policy_attachment" "irsa_ecr_read" {
-  role       = aws_iam_role.irsa_ecr_read.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
+data "aws_iam_policy_document" "github_actions" {
 
-data "aws_iam_policy_document" "node_cloudwatch" {
   statement {
+    sid    = "ECRAuthorization"
     effect = "Allow"
+
     actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-      "logs:DescribeLogStreams",
-      "cloudwatch:PutMetricData"
+      "ecr:GetAuthorizationToken"
     ]
+
     resources = ["*"]
   }
-}
-
-resource "aws_iam_policy" "node_cloudwatch" {
-  name   = "${var.name}-node-cloudwatch"
-  policy = data.aws_iam_policy_document.node_cloudwatch.json
-  tags   = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "node_cloudwatch" {
-  role       = var.node_iam_role_name
-  policy_arn = aws_iam_policy.node_cloudwatch.arn
-}
-
-data "aws_iam_policy_document" "ci_ecr_push" {
-  count = var.enable_ci_ecr_push_policy ? 1 : 0
 
   statement {
+    sid    = "ECRPushPull"
     effect = "Allow"
+
     actions = [
-      "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
-      "ecr:PutImage",
+      "ecr:BatchGetImage",
+      "ecr:CompleteLayerUpload",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "ecr:GetDownloadUrlForLayer",
       "ecr:InitiateLayerUpload",
-      "ecr:UploadLayerPart",
-      "ecr:CompleteLayerUpload"
+      "ecr:ListImages",
+      "ecr:PutImage",
+      "ecr:UploadLayerPart"
     ]
+
+    resources = var.ecr_repository_arns
+  }
+
+  statement {
+    sid    = "DescribeEKS"
+    effect = "Allow"
+
+    actions = [
+      "eks:DescribeCluster"
+    ]
+
     resources = ["*"]
   }
 }
 
-resource "aws_iam_policy" "ci_ecr_push" {
-  count  = var.enable_ci_ecr_push_policy ? 1 : 0
-  name   = "${var.name}-ci-ecr-push"
-  policy = data.aws_iam_policy_document.ci_ecr_push[0].json
-  tags   = var.tags
+resource "aws_iam_policy" "github_actions" {
+  name = "${var.name}-github-actions"
+
+  description = "MegaMart GitHub Actions permissions for ECR and EKS"
+
+  policy = data.aws_iam_policy_document.github_actions.json
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions.arn
 }
