@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: checkout-service
@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: checkout-service
-          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/checkout-service:latest
+          image: 047385030300.dkr.ecr.us-east-1.amazonaws.com/checkout-service:latest
 
           ports:
             - name: http

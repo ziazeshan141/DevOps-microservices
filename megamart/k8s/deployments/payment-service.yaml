@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-service
@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/payment-service:latest
+          image: 047385030300.dkr.ecr.us-east-1.amazonaws.com/payment-service:latest
 
           ports:
             - name: http
