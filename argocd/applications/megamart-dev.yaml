@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: megamart-dev
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/ziazeshan141/DevOps-microservices.git
+
+    targetRevision: Test
+
+    path: megamart/k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: megamart
+
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+    retry:
+      limit: 5
+
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
